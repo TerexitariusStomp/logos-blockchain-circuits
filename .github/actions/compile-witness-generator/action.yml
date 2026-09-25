@@ -101,7 +101,7 @@ runs:
         OS: ${{ inputs.os }}
       run: |
         SED_I="sed -i"
-        if [ "$OS" = "macos" ]; then SED_I="sed -i ''"; fi
+        if [ "$OS" = "macos" ] || [ "$OS" = "ios" ]; then SED_I="sed -i ''"; fi
         $SED_I ':a;N;$!ba;s/\n}\n\n*$/\n  return 0;\n}/' "${CIRCUIT_CPP_PATH}/main.cpp"
 
     # circom's --c backend emits an empty ~Circom_CalcWit destructor (the binary

@@ -75,7 +75,7 @@ android-lib: $(LIB)
 # ---- iOS (arm64 device; Xcode toolchain) ----
 # Same LP64 uint64_t/mp_limb_t mismatch as macOS — compile with gmp_patch.hpp
 # force-included (the action copies it into the circuit dir).
-IOS_SDK := $(shell xcrun --sdk iphoneos --show-sdk-path)
+IOS_SDK = $(shell xcrun --sdk iphoneos --show-sdk-path)
 ios-lib: CXX := xcrun -sdk iphoneos clang++
 ios-lib: LD := xcrun -sdk iphoneos ld
 ios-lib: OBJCOPY := llvm-objcopy

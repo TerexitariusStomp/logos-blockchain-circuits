@@ -1510,7 +1510,7 @@ jobs:
 
       - name: Point Witness Generators at the Android GMP + host headers
         run: |
-          echo "PRIORITY_FLAGS=-I${{ github.workspace }}/rapidsnark/depends/gmp/package_android_arm64/include -I/usr/include" >> $GITHUB_ENV
+          echo "PRIORITY_FLAGS=-I${{ github.workspace }}/rapidsnark/depends/gmp/package_android_arm64/include" >> $GITHUB_ENV
 
       - name: Compile PoL Witness Generator
         uses: ./.github/actions/compile-witness-generator
