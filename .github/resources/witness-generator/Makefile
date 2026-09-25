@@ -1,4 +1,4 @@
-.PHONY: linux macos windows linux-lib macos-lib windows-lib build clean
+.PHONY: linux macos windows linux-lib macos-lib windows-lib android-lib ios-lib build clean
 
 # ---- Arguments ----
 ifndef PROJECT
@@ -7,6 +7,7 @@ endif
 
 # ---- Common ----
 CXX             := g++
+LD              := ld
 PRIORITY_FLAGS  ?=
 CXXFLAGS_COMMON := -std=c++11 -O3 -I. -Wno-address-of-packed-member -Dmain=circom_main
 COMMON_SRCS     := main.cpp calcwit.cpp fr.cpp $(PROJECT).cpp
@@ -59,6 +60,29 @@ windows: $(BIN)
 windows-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -I/include -Duint="unsigned int"
 windows-lib: $(LIB)
 
+# ---- Android (aarch64; NDK clang++) ----
+# ANDROID_NDK must point at the NDK root (GitHub runners export
+# ANDROID_NDK_ROOT). ANDROID_API overrides the platform level.
+ANDROID_NDK ?= $(or $(ANDROID_NDK_HOME),$(ANDROID_NDK_ROOT))
+ANDROID_API ?= 26
+ANDROID_BIN := $(ANDROID_NDK)/toolchains/llvm/prebuilt/linux-x86_64/bin
+android-lib: CXX := $(ANDROID_BIN)/aarch64-linux-android$(ANDROID_API)-clang++
+android-lib: LD := $(ANDROID_BIN)/ld.lld
+android-lib: OBJCOPY := $(ANDROID_BIN)/llvm-objcopy
+android-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC
+android-lib: $(LIB)
+
+# ---- iOS (arm64 device; Xcode toolchain) ----
+# Same LP64 uint64_t/mp_limb_t mismatch as macOS — compile with gmp_patch.hpp
+# force-included (the action copies it into the circuit dir).
+IOS_SDK := $(shell xcrun --sdk iphoneos --show-sdk-path)
+ios-lib: CXX := xcrun -sdk iphoneos clang++
+ios-lib: LD := xcrun -sdk iphoneos ld
+ios-lib: OBJCOPY := llvm-objcopy
+ios-lib: SYM_PREFIX := _
+ios-lib: CXXFLAGS=$(PRIORITY_FLAGS) $(CXXFLAGS_COMMON) -fPIC -arch arm64 -miphoneos-version-min=13.0 -isysroot $(IOS_SDK) -include gmp_patch.hpp
+ios-lib: $(LIB)
+
 # Localizes witness-generator implementation symbols to prevent conflicts when multiple circuit libraries are linked
 # into the same binary.
 # See CONTRIBUTING.md § "Symbol Isolation".
@@ -72,7 +96,7 @@ $(BIN): $(COMMON_OBJS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(LIB): $(LIB_OBJS)
-	ld -r -o $(LOCAL_OBJ) $^
+	$(LD) -r -o $(LOCAL_OBJ) $^
 	$(OBJCOPY) $(foreach sym,$(PUBLIC_SYMS),--keep-global-symbol=$(SYM_PREFIX)$(sym)) $(LOCAL_OBJ)
 	rm -f $@
 	ar rcs $@ $(LOCAL_OBJ)

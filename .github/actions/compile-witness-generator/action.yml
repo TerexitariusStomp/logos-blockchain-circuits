@@ -115,21 +115,23 @@ runs:
       run: sh "${WITNESS_GENERATOR_RESOURCES_PATH}/fix_calcwit_leak.sh" "${CIRCUIT_CPP_PATH}"
 
     - name: Install llvm-objcopy (macOS)
-      if: ${{ inputs.os == 'macos' }}
+      if: ${{ inputs.os == 'macos' || inputs.os == 'ios' }}
       shell: bash
       run: |
         brew install llvm
         echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
 
     # TODO: Instead of insertion, make a fork that includes the appropriate patch (or the actual fix)
-    - name: Patch MacOS GMP
+    # iOS shares macOS's LP64 uint64_t/mp_limb_t mismatch — reuse the same
+    # cast patch. Android uses LP64 gmp headers unmodified (like Linux).
+    - name: Patch macOS-family GMP
       shell: bash
-      if: ${{ inputs.os == 'macos' }}
+      if: ${{ inputs.os == 'macos' || inputs.os == 'ios' }}
       env:
         WITNESS_GENERATOR_RESOURCES_PATH: ${{ steps.parse-circuit-path.outputs.WITNESS_GENERATOR_RESOURCES_PATH }}
         CIRCUIT_CPP_PATH: ${{ steps.parse-circuit-path.outputs.CIRCUIT_CPP_PATH }}
         OS: ${{ inputs.os }}
-      run: cp "${WITNESS_GENERATOR_RESOURCES_PATH}/${{ env.OS }}.gmp_patch.hpp" "${CIRCUIT_CPP_PATH}/gmp_patch.hpp"
+      run: cp "${WITNESS_GENERATOR_RESOURCES_PATH}/macos.gmp_patch.hpp" "${CIRCUIT_CPP_PATH}/gmp_patch.hpp"
 
     - name: Compile ${{ inputs.circuit-name-display }}
       if: ${{ inputs.os != 'windows' }}
