@@ -186,7 +186,7 @@ pub fn build_circuit(circuit_name: &str) {
     println!("cargo:rustc-link-lib=static={circuit_name}");
     let cpp_lib = std::env::var("CARGO_CFG_TARGET_OS").map_or_else(
         |_| "stdc++",
-        |os| if os == "macos" { "c++" } else { "stdc++" },
+        |os| if os == "macos" || os == "ios" { "c++" } else { "stdc++" },
     );
     println!("cargo:rustc-link-lib={cpp_lib}");
     println!("cargo:rustc-link-lib=static=gmp");
