@@ -1484,7 +1484,13 @@ jobs:
           circom --version
 
       - name: Install Dependencies [Witness Generator]
-        run: sudo apt update -y && sudo apt install -y nlohmann-json3-dev m4
+        run: |
+          sudo apt update -y && sudo apt install -y m4
+          # nlohmann/json single header — the NDK clang must not see host
+          # /usr/include, so vendor it next to the sources like the Windows
+          # job does for /include.
+          mkdir -p deps/nlohmann
+          curl -fL -o deps/nlohmann/json.hpp https://github.com/nlohmann/json/releases/download/v3.12.0/json.hpp
 
       - name: Cache GMP Archive
         id: cache-gmp
@@ -1508,9 +1514,9 @@ jobs:
           export ANDROID_NDK="$ANDROID_NDK_ROOT"
           ./build_gmp.sh android
 
-      - name: Point Witness Generators at the Android GMP + host headers
+      - name: Point Witness Generators at the Android GMP + vendored headers
         run: |
-          echo "PRIORITY_FLAGS=-I${{ github.workspace }}/rapidsnark/depends/gmp/package_android_arm64/include" >> $GITHUB_ENV
+          echo "PRIORITY_FLAGS=-I${{ github.workspace }}/rapidsnark/depends/gmp/package_android_arm64/include -I${{ github.workspace }}/deps" >> $GITHUB_ENV
 
       - name: Compile PoL Witness Generator
         uses: ./.github/actions/compile-witness-generator
