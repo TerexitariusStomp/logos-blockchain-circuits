@@ -103,57 +103,24 @@ jobs:
       PTAU_URL: "https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_17.ptau"
       PTAU_FILE: "powersOfTau28_hez_final_17.ptau"
     steps:
-      - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
-
-      - name: Initialise Submodules
-        run: git submodule update --init --recursive
-
-      - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7  # v1.16.0
-        with:
-          cache: false
-
-      - name: Install Circom
+      # The canonical Hermez powers-of-tau URL upstream used (env.PTAU_URL)
+      # now returns 403, and a fresh `zkey contribute` would mint verification
+      # keys that do not match the deployed testnet anyway. Reuse the exact
+      # proving keys published in the same-version upstream release bundle;
+      # zkey content is platform-independent.
+      - name: Fetch Proving Keys From Published Release
         run: |
-          git clone --branch ${{ env.CIRCOM_TAG }} --depth 1 https://github.com/iden3/circom.git
-          cd circom
-          RUSTFLAGS="-A dead_code" cargo build --release
-          RUSTFLAGS="-A dead_code" cargo install --path circom
-          circom --version
-
-      - name: Setup Node.js
-        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b
-        with:
-          node-version: '20'
-
-      - name: Install snarkjs
-        run: npm install -g snarkjs@0.7.6
-
-      - name: Cache Powers of Tau
-        id: cache-ptau
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: ${{ env.PTAU_FILE }}
-          key: ptau-${{ env.PTAU_FILE }}
-
-      - name: Download Powers of Tau
-        if: steps.cache-ptau.outputs.cache-hit != 'true'
-        run: |
-          echo "Downloading Powers of Tau file (this may take a while, ~3GB)..."
-          curl -L -o "${{ env.PTAU_FILE }}" "${{ env.PTAU_URL }}"
-          echo "Download complete."
-
-      - name: Generate Proving Key
-        run: |
-          cd ${{ matrix.circuit.dir }}
-          circom --r1cs --O2 ${{ matrix.circuit.file }}
-          snarkjs groth16 setup ${CIRCUIT_NAME}.r1cs ../${{ env.PTAU_FILE }} ${{ matrix.circuit.name }}-0.zkey
-          # Single-contributor trusted setup: A proper MPC ceremony is required before production (see issue #17).
-          head -c 32 /dev/urandom | xxd -p -c 256 | snarkjs zkey contribute ${{ matrix.circuit.name }}-0.zkey ${{ matrix.circuit.name }}.zkey --name="RELEASE" -v
-          snarkjs zkey export verificationkey ${{ matrix.circuit.name }}.zkey ${{ matrix.circuit.name }}_verification_key.json
-        env:
-          CIRCUIT_NAME: ${{ matrix.circuit.file == 'signature.circom' && 'signature' || matrix.circuit.name }}
+          BUNDLE="logos-blockchain-circuits-${{ env.VERSION }}-macos-aarch64"
+          curl -fL --retry 5 -o bundle.tar.gz \
+            "https://github.com/logos-blockchain/logos-blockchain-circuits/releases/download/${{ env.VERSION }}/${BUNDLE}.tar.gz"
+          tar -xzf bundle.tar.gz \
+            "${BUNDLE}/${{ matrix.circuit.name }}/proving_key.zkey" \
+            "${BUNDLE}/${{ matrix.circuit.name }}/verification_key.json"
+          mkdir -p "${{ matrix.circuit.dir }}"
+          cp "${BUNDLE}/${{ matrix.circuit.name }}/proving_key.zkey" \
+             "${{ matrix.circuit.dir }}/${{ matrix.circuit.name }}.zkey"
+          cp "${BUNDLE}/${{ matrix.circuit.name }}/verification_key.json" \
+             "${{ matrix.circuit.dir }}/${{ matrix.circuit.name }}_verification_key.json"
 
       - name: Upload Proving Key
         uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
