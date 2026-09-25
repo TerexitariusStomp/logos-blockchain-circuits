@@ -1829,6 +1829,8 @@ jobs:
 
   publish-release:
     name: Create Release
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     # Only create releases for tags, not for PRs
     if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
@@ -1876,6 +1878,8 @@ jobs:
 
   upload-artifacts:
     name: Upload Unified Bundles to Release
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     # Only upload to release for tags, not for PRs
     if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
