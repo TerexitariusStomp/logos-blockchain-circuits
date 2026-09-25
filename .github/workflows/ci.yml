@@ -995,6 +995,9 @@ jobs:
           # MACOSX_DEPLOYMENT_TARGET. Patch it to 11.0 so libgmp.a matches Rust's
           # aarch64-apple-darwin toolchain target (macOS 11.0+).
           sed -i '' 's/-mmacos-version-min=14\.0/-mmacos-version-min=11.0/g' build_gmp.sh
+          # gmp-6.2.1's configure can't detect a build-system preprocessor on
+          # newer Xcode images; give it one explicitly.
+          export CPP_FOR_BUILD="clang -E"
           ./build_gmp.sh macos_arm64
           make macos_arm64
 
@@ -1249,6 +1252,9 @@ jobs:
           # MACOSX_DEPLOYMENT_TARGET. Patch it to 11.0 so libgmp.a matches Rust's
           # x86_64-apple-darwin toolchain target (macOS 11.0+).
           sed -i '' 's/-mmacos-version-min=14\.0/-mmacos-version-min=11.0/g' build_gmp.sh
+          # gmp-6.2.1's configure can't detect a build-system preprocessor on
+          # newer Xcode images; give it one explicitly.
+          export CPP_FOR_BUILD="clang -E"
           ./build_gmp.sh macos_x86_64
           make macos_x86_64
 
